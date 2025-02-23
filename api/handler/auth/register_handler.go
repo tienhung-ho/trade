@@ -10,6 +10,7 @@ import (
 	walletrepo "client/internal/repository/mysql/wallets"
 	authbusiness "client/internal/service/auth"
 	validation "client/internal/util/validate"
+	"log"
 	"net/http"
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -48,7 +49,7 @@ func RegisterUserHandler(db *gorm.DB, rdb *redis.Client, appCtx *cosmosmodel.App
 			return
 		}
 
-		store := userrepo.NewMySQLOrder(db)
+		store := userrepo.NewMySQLUser(db)
 		authQueryClient := authtypes.NewQueryClient(appCtx.GRPCConn)
 		cosmosStore := cosmosrepo.NewCosmos(appCtx.ClientCtx, appCtx.TxFactory, appCtx.Keyring, authQueryClient, &appCtx.ProtoCodec)
 		walletStore := walletrepo.NewMySQLWallet(db)
@@ -57,7 +58,7 @@ func RegisterUserHandler(db *gorm.DB, rdb *redis.Client, appCtx *cosmosmodel.App
 		id, err := biz.RegisterUser(c.Request.Context(), &data)
 
 		if err != nil {
-
+			log.Print("1111111111111111111", err)
 			c.JSON(http.StatusInternalServerError, err)
 			c.Abort()
 			return

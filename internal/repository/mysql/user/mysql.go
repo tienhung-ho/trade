@@ -11,14 +11,14 @@ import (
 var (
 	AllowedSortFields = map[string]bool{}
 	SelectFields      = []string{
-		"user_id",  // AccountID
-		"phone",    // Phone
-		"fullname", // Fullname
-		"status",   // Status
-		"email",    // Email
-		"gender",   // Gender
-		"profile",
-		"password",
+		"`user`.`user_id`",
+		"`user`.`phone`",
+		"`user`.`fullname`",
+		"`user`.`status`",
+		"`user`.`email`",
+		"`user`.`gender`",
+		"`user`.`profile`",
+		"`user`.`password`",
 	}
 	WalletSelectField = []string{
 		"wallet_id",
@@ -34,7 +34,7 @@ type mysqlUser struct {
 	db *gorm.DB
 }
 
-func NewMySQLOrder(db *gorm.DB) *mysqlUser {
+func NewMySQLUser(db *gorm.DB) *mysqlUser {
 	return &mysqlUser{db}
 }
 

@@ -24,9 +24,24 @@ type UserRegister struct {
 
 	model.CommonFields
 	// Quan hệ one-to-many với UserWallet
-	Wallets []walletmodel.UserWallet `gorm:"foreignKey:UserID;references:ID" json:"wallets,omitempty"`
+	Wallets walletmodel.UserWallet `gorm:"foreignKey:UserID;references:ID" json:"wallets,omitempty"`
+}
+
+type UserRegisterReponse struct {
+	Address  string `json:"address"`
+	Mnemonic string `json:"mnemonic"`
 }
 
 func (UserRegister) TableName() string {
 	return User{}.TableName()
+}
+
+type UserLoginWeb2 struct {
+	Email    string `gorm:"column:email;size:255;unique;not null" json:"email"`
+	Password string `gorm:"column:password;size:255;not null" json:"-"` // không expose password trong JSON
+}
+
+type UserLoginWeb3 struct {
+	WalletAddress string `json:"address"`
+	Mnemonic      string `json:"mnemonic,omitempty"`
 }

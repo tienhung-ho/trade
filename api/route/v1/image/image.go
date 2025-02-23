@@ -1,10 +1,10 @@
 package imagev1
 
 import (
+	imagehandler "client/api/handler/image"
+	cloudmiddleware "client/api/middleware/cloud"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	imagehandler "tart-shop-manager/api/handler/image"
-	cloudmiddleware "tart-shop-manager/api/middleware/cloud"
 )
 
 func ImageRouter(image *gin.RouterGroup, db *gorm.DB) {

@@ -1,17 +1,17 @@
 package categoryhandler
 
 import (
+	"client/internal/common/apperrors"
+	"client/internal/common/appresponses"
+	categorymodel "client/internal/model/mysql/category"
+	categorystorage "client/internal/repository/mysql/category"
+	imagestorage "client/internal/repository/mysql/image"
+	categorybusiness "client/internal/service/category"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"net/http"
-	"tart-shop-manager/internal/common"
-	categorymodel "tart-shop-manager/internal/entity/dtos/sql/category"
-	categorystorage "tart-shop-manager/internal/repository/mysql/category"
-	imagestorage "tart-shop-manager/internal/repository/mysql/image"
-	categorycache "tart-shop-manager/internal/repository/redis/category"
-	categorybusiness "tart-shop-manager/internal/service/category"
 )
 
 func CreateCategoryHandler(db *gorm.DB, rdb *redis.Client) func(c *gin.Context) {
@@ -19,7 +19,7 @@ func CreateCategoryHandler(db *gorm.DB, rdb *redis.Client) func(c *gin.Context) 
 
 		var data categorymodel.CreateCategory
 		if err := c.ShouldBind(&data); err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInternal(err))
+			c.JSON(http.StatusBadRequest, apperrors.ErrInternal(err))
 			c.Abort()
 			return
 		}
@@ -28,8 +28,8 @@ func CreateCategoryHandler(db *gorm.DB, rdb *redis.Client) func(c *gin.Context) 
 		err := validate.Struct(&data)
 		if err != nil {
 			if validationErrors, ok := err.(validator.ValidationErrors); ok {
-				//appErr := common.ErrValidation(validationErrors)
-				c.JSON(http.StatusBadRequest, common.ErrValidation(validationErrors))
+				//appErr := apperrors}.ErrValidation(validationErrors)
+				c.JSON(http.StatusBadRequest, apperrors.ErrValidation(validationErrors))
 				return
 			}
 
@@ -40,8 +40,8 @@ func CreateCategoryHandler(db *gorm.DB, rdb *redis.Client) func(c *gin.Context) 
 
 		store := categorystorage.NewMySQLCategory(db)
 		cloud := imagestorage.NewMySQLImage(db)
-		cache := categorycache.NewRdbStorage(rdb)
-		biz := categorybusiness.NewCreateCategoryBusiness(store, cache, cloud)
+		//cache := categorycache.NewRdbStorage(rdb)
+		biz := categorybusiness.NewCreateCategoryBusiness(store, nil, cloud, db)
 
 		recordId, err := biz.CreateCategory(c, &data)
 
@@ -51,6 +51,6 @@ func CreateCategoryHandler(db *gorm.DB, rdb *redis.Client) func(c *gin.Context) 
 			return
 		}
 
-		c.JSON(http.StatusOK, common.NewDataResponse(recordId, "create category successfully"))
+		c.JSON(http.StatusOK, appresponses.NewDataResponse(recordId, "create category successfully"))
 	}
 }

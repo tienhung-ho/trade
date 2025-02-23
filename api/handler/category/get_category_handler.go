@@ -1,15 +1,15 @@
 package categoryhandler
 
 import (
+	"client/internal/common/apperrors"
+	"client/internal/common/appresponses"
+	categorystorage "client/internal/repository/mysql/category"
+	categorybusiness "client/internal/service/category"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"net/http"
 	"strconv"
-	"tart-shop-manager/internal/common"
-	categorystorage "tart-shop-manager/internal/repository/mysql/category"
-	categorycache "tart-shop-manager/internal/repository/redis/category"
-	categorybusiness "tart-shop-manager/internal/service/category"
 )
 
 func GetCategoryHandler(db *gorm.DB, rdb *redis.Client) func(c *gin.Context) {
@@ -18,14 +18,14 @@ func GetCategoryHandler(db *gorm.DB, rdb *redis.Client) func(c *gin.Context) {
 		id, err := strconv.Atoi(c.Param("id"))
 
 		if err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInternal(err))
+			c.JSON(http.StatusBadRequest, apperrors.ErrInternal(err))
 			c.Abort()
 			return
 		}
 
 		store := categorystorage.NewMySQLCategory(db)
-		cache := categorycache.NewRdbStorage(rdb)
-		biz := categorybusiness.NewGetCategoryBiz(store, cache)
+		//cache := categorycache.NewRdbStorage(rdb)
+		biz := categorybusiness.NewGetCategoryBiz(store, nil)
 
 		record, err := biz.GetCategory(c.Request.Context(), map[string]interface{}{"category_id": id})
 
@@ -35,7 +35,7 @@ func GetCategoryHandler(db *gorm.DB, rdb *redis.Client) func(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusOK, common.NewDataResponse(record, "get account successfully"))
+		c.JSON(http.StatusOK, appresponses.NewDataResponse(record, "get account successfully"))
 
 	}
 }

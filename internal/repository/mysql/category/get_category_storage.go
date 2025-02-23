@@ -1,8 +1,10 @@
 package categorystorage
 
 import (
+	categorymodel "client/internal/model/mysql/category"
 	"context"
-	categorymodel "tart-shop-manager/internal/entity/dtos/sql/category"
+
+	"gorm.io/gorm"
 )
 
 func (s *mysqlCategory) GetCategory(ctx context.Context, cond map[string]interface{}, morekeys ...string) (*categorymodel.Category, error) {
@@ -10,8 +12,11 @@ func (s *mysqlCategory) GetCategory(ctx context.Context, cond map[string]interfa
 	db := s.db
 
 	var record categorymodel.Category
-	if err := db.WithContext(ctx).Select(categorymodel.SelectFields).
-		Where(cond).Preload("Images").First(&record).Error; err != nil {
+	if err := db.WithContext(ctx).
+		Where(cond).Preload("Images", func(db *gorm.DB) *gorm.DB {
+		return db.Select(ImageSelectFields)
+	}).
+		First(&record).Error; err != nil {
 		return nil, err
 	}
 

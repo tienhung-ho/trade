@@ -1,13 +1,14 @@
 package imagehandler
 
 import (
+	"client/internal/common/apperrors"
+	"client/internal/common/appresponses"
+	imagestorage "client/internal/repository/mysql/image"
+	imagebusiness "client/internal/service/image"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"net/http"
 	"strconv"
-	"tart-shop-manager/internal/common"
-	imagestorage "tart-shop-manager/internal/repository/mysql/image"
-	imagebusiness "tart-shop-manager/internal/service/image"
 )
 
 func DeleteImageHandler(db *gorm.DB) func(c *gin.Context) {
@@ -16,7 +17,7 @@ func DeleteImageHandler(db *gorm.DB) func(c *gin.Context) {
 		id, err := strconv.Atoi(c.Param("id"))
 
 		if err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInternal(err))
+			c.JSON(http.StatusBadRequest, apperrors.ErrInternal(err))
 			c.Abort()
 			return
 		}
@@ -30,6 +31,6 @@ func DeleteImageHandler(db *gorm.DB) func(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusOK, common.NewDataResponse(true, "delete image successfully"))
+		c.JSON(http.StatusOK, appresponses.NewDataResponse(true, "delete image successfully"))
 	}
 }

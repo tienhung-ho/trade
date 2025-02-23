@@ -21,7 +21,7 @@ type User struct {
 
 	model.CommonFields
 	// Quan hệ one-to-many với UserWallet
-	Wallets []walletmodel.UserWallet `gorm:"foreignKey:UserID;references:ID" json:"wallets,omitempty"`
+	Wallets walletmodel.UserWallet `gorm:"foreignKey:UserID;references:ID" json:"wallets,omitempty"`
 }
 
 func (User) TableName() string {

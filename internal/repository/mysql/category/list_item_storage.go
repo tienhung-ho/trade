@@ -1,19 +1,19 @@
 package categorystorage
 
 import (
+	"client/internal/common/apperrors"
+	"client/internal/common/filter"
+	"client/internal/common/paging"
+	categorymodel "client/internal/model/mysql/category"
 	"context"
+
 	"gorm.io/gorm"
-	"tart-shop-manager/internal/common"
-	commonfilter "tart-shop-manager/internal/common/filter"
-	paggingcommon "tart-shop-manager/internal/common/paging"
-	commonrecover "tart-shop-manager/internal/common/recover"
-	categorymodel "tart-shop-manager/internal/entity/dtos/sql/category"
 )
 
-func (s *mysqlCategory) ListItem(ctx context.Context, cond map[string]interface{}, paging *paggingcommon.Paging, filter *commonfilter.Filter, morekeys ...string) ([]categorymodel.Category, error) {
+func (s *mysqlCategory) ListItem(ctx context.Context,
+	cond map[string]interface{}, paging *paging.Paging,
+	filter *filter.Filter, morekeys ...string) ([]categorymodel.Category, error) {
 	db := s.db
-
-	defer commonrecover.RecoverTransaction(db)
 
 	// // Đếm tổng số lượng items
 	if err := s.countRecord(db, cond, paging, filter); err != nil {
@@ -31,15 +31,17 @@ func (s *mysqlCategory) ListItem(ctx context.Context, cond map[string]interface{
 
 	// Thực hiện truy vấn
 	var records []categorymodel.Category
-	if err := query.Select(categorymodel.SelectFields).
-		Preload("Images").Find(&records).Error; err != nil {
+	if err := query.Select(SelectFields).
+		Preload("Images", func(db *gorm.DB) *gorm.DB {
+			return db.Select(ImageSelectFields)
+		}).Find(&records).Error; err != nil {
 		return nil, err
 	}
 
 	return records, nil
 }
 
-func (s *mysqlCategory) countRecord(db *gorm.DB, cond map[string]interface{}, paging *paggingcommon.Paging, filter *commonfilter.Filter) error {
+func (s *mysqlCategory) countRecord(db *gorm.DB, cond map[string]interface{}, paging *paging.Paging, filter *filter.Filter) error {
 	// Apply conditions and filters
 	db = s.buildQuery(db, cond, filter)
 
@@ -48,12 +50,12 @@ func (s *mysqlCategory) countRecord(db *gorm.DB, cond map[string]interface{}, pa
 	}
 
 	if err := db.Table(categorymodel.Category{}.TableName()).Count(&paging.Total).Error; err != nil {
-		return common.NewErrorResponse(err, "Error count items from database", err.Error(), "CouldNotCount")
+		return apperrors.NewErrorResponse(err, "Error count items from database", err.Error(), "CouldNotCount")
 	}
 	return nil
 }
 
-func (s *mysqlCategory) buildQuery(db *gorm.DB, cond map[string]interface{}, filter *commonfilter.Filter) *gorm.DB {
+func (s *mysqlCategory) buildQuery(db *gorm.DB, cond map[string]interface{}, filter *filter.Filter) *gorm.DB {
 	db = db.Where(cond)
 	if filter != nil {
 		if filter.Search != "" {
@@ -68,11 +70,11 @@ func (s *mysqlCategory) buildQuery(db *gorm.DB, cond map[string]interface{}, fil
 	return db
 }
 
-func (s *mysqlCategory) addPaging(db *gorm.DB, paging *paggingcommon.Paging) (*gorm.DB, error) {
+func (s *mysqlCategory) addPaging(db *gorm.DB, paging *paging.Paging) (*gorm.DB, error) {
 	// Parse and validate the sort fields
-	sortFields, err := paging.ParseSortFields(paging.Sort, categorymodel.AllowedSortFields)
+	sortFields, err := paging.ParseSortFields(paging.Sort, AllowedSortFields)
 	if err != nil {
-		return nil, common.NewErrorResponse(err, "Invalid sort parameters", err.Error(), "InvalidSort")
+		return nil, apperrors.NewErrorResponse(err, "Invalid sort parameters", err.Error(), "InvalidSort")
 	}
 
 	// Apply sorting to the query

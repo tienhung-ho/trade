@@ -17,7 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type AuthInterface interface {
+type AuthRegisterInterface interface {
 	RegisterUser(db *gorm.DB, data *usermodel.UserRegister, morekeys ...string) (uint64, error)
 	GetUser(ctx context.Context, cond map[string]interface{}, morekeys ...string) (*usermodel.User, error)
 }
@@ -27,14 +27,14 @@ type WalletInterface interface {
 }
 
 type AuthBusiness struct {
-	store       AuthInterface
+	store       AuthRegisterInterface
 	db          *gorm.DB // GORM DB được inject
 	cosmosStore cosmosservice.CosmosInterface
 	walletStore WalletInterface
 }
 
 func NewAuthBiz(
-	store AuthInterface,
+	store AuthRegisterInterface,
 	db *gorm.DB,
 	cosmos cosmosservice.CosmosInterface,
 	walletStore WalletInterface,
@@ -48,25 +48,25 @@ func NewAuthBiz(
 }
 
 func (biz *AuthBusiness) RegisterUser(ctx context.Context,
-	data *usermodel.UserRegister, morekeys ...string) (uint64, error) {
+	data *usermodel.UserRegister, morekeys ...string) (*usermodel.UserRegisterReponse, error) {
 
 	costEnv := os.Getenv("COST")
 	costInt, err := strconv.Atoi(costEnv)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	addrEnv := os.Getenv("ALICE")
 	denom := os.Getenv("COIN_NAME")
 	adminName := os.Getenv("ADMIN_NAME")
 	if adminName == "" {
-		return 0, errors.New("ADMIN_NAME is empty")
+		return nil, errors.New("ADMIN_NAME is empty")
 	}
 
 	// 1) Mở transaction duy nhất
 	tx := biz.db.Begin()
 	if err := tx.Error; err != nil {
-		return 0, apperrors.ErrDB(err)
+		return nil, apperrors.ErrDB(err)
 	}
 
 	// Dùng defer để rollback nếu panic
@@ -82,7 +82,7 @@ func (biz *AuthBusiness) RegisterUser(ctx context.Context,
 	hashed, err := hashUtil.HashPassword(data.Password)
 	if err != nil {
 		tx.Rollback()
-		return 0, err
+		return nil, err
 	}
 	data.Password = hashed
 
@@ -90,25 +90,23 @@ func (biz *AuthBusiness) RegisterUser(ctx context.Context,
 	entropy, err := biz.cosmosStore.GenerateEntropy(256)
 	if err != nil {
 		tx.Rollback()
-		return 0, apperrors.ErrInternal(fmt.Errorf("cannot generate entropy: %w", err))
+		return nil, apperrors.ErrInternal(fmt.Errorf("cannot generate entropy: %w", err))
 	}
 	mnemonic, err := biz.cosmosStore.GenerateMnemonic(entropy)
 	if err != nil {
 		tx.Rollback()
-		return 0, apperrors.ErrInternal(fmt.Errorf("cannot generate mnemonic: %w", err))
+		return nil, apperrors.ErrInternal(fmt.Errorf("cannot generate mnemonic: %w", err))
 	}
-	hashedMnemonic, err := hashUtil.HashPassword(data.Password)
-	if err != nil {
-		tx.Rollback()
-		return 0, err
-	}
-	// 4) Tạo key alias trên Cosmos
+
+	hashUtilMnem := hashutil.NewMnemonicSHA()
+	hashedMnemonic := hashUtilMnem.HashSHA256(mnemonic)
+
 	alias := fmt.Sprintf("user-%s", data.Fullname)
 	hdPath := "m/44'/118'/0'/0/0"
 	err = biz.cosmosStore.CreateNewUser(alias, mnemonic, hdPath)
 	if err != nil {
 		tx.Rollback()
-		return 0, apperrors.ErrInternal(fmt.Errorf("cannot create cosmos key for user: %w", err))
+		return nil, apperrors.ErrInternal(fmt.Errorf("cannot create cosmos key for user: %w", err))
 	}
 
 	newAddr, err := biz.cosmosStore.GetAddressFromKeyName(alias)
@@ -116,7 +114,7 @@ func (biz *AuthBusiness) RegisterUser(ctx context.Context,
 		tx.Rollback()
 		// Optionally xóa key rác
 		_ = biz.cosmosStore.DeleteKey(alias)
-		return 0, apperrors.ErrInternal(err)
+		return nil, apperrors.ErrInternal(err)
 	}
 
 	// 5) Mint + Send tokens
@@ -125,34 +123,34 @@ func (biz *AuthBusiness) RegisterUser(ctx context.Context,
 	if err := biz.cosmosStore.UpdateTxFactoryAccountSequence(adminName); err != nil {
 		tx.Rollback()
 		_ = biz.cosmosStore.DeleteKey(alias)
-		return 0, fmt.Errorf("cannot update tx factory for admin: %w", err)
+		return nil, fmt.Errorf("cannot update tx factory for admin: %w", err)
 	}
 
 	txBuilder, err := biz.cosmosStore.BuildTx(msg)
 	if err != nil {
 		tx.Rollback()
 		_ = biz.cosmosStore.DeleteKey(alias)
-		return 0, apperrors.ErrInternal(err)
+		return nil, apperrors.ErrInternal(err)
 	}
 
 	if err := biz.cosmosStore.SignTx(ctx, adminName, txBuilder); err != nil {
 		tx.Rollback()
 		_ = biz.cosmosStore.DeleteKey(alias)
-		return 0, apperrors.ErrInternal(err)
+		return nil, apperrors.ErrInternal(err)
 	}
 
 	txBytes, err := biz.cosmosStore.EncodeTxBytes(txBuilder)
 	if err != nil {
 		tx.Rollback()
 		_ = biz.cosmosStore.DeleteKey(alias)
-		return 0, fmt.Errorf("cannot encode tx: %w", err)
+		return nil, fmt.Errorf("cannot encode tx: %w", err)
 	}
 
 	res, err := biz.cosmosStore.BroadcastTx(txBytes)
 	if err != nil {
 		tx.Rollback()
 		_ = biz.cosmosStore.DeleteKey(alias)
-		return 0, fmt.Errorf("cannot broadcast tx: %w", err)
+		return nil, fmt.Errorf("cannot broadcast tx: %w", err)
 	}
 	log.Println(res)
 
@@ -161,7 +159,7 @@ func (biz *AuthBusiness) RegisterUser(ctx context.Context,
 	if err != nil {
 		tx.Rollback()
 		_ = biz.cosmosStore.DeleteKey(alias)
-		return 0, apperrors.ErrCannotCreateEntity(usermodel.EntityName, err)
+		return nil, apperrors.ErrCannotCreateEntity(usermodel.EntityName, err)
 	}
 
 	// 7) Tạo wallet trong DB
@@ -172,7 +170,7 @@ func (biz *AuthBusiness) RegisterUser(ctx context.Context,
 	if err != nil {
 		tx.Rollback()
 		_ = biz.cosmosStore.DeleteKey(alias)
-		return 0, apperrors.ErrCannotCreateEntity(walletmodel.EntityName, err)
+		return nil, apperrors.ErrCannotCreateEntity(walletmodel.EntityName, err)
 	}
 	log.Printf("WalletID = %d, UserID = %d\n", walletID, userID)
 
@@ -180,9 +178,13 @@ func (biz *AuthBusiness) RegisterUser(ctx context.Context,
 	if err := tx.Commit().Error; err != nil {
 		tx.Rollback()
 		_ = biz.cosmosStore.DeleteKey(alias)
-		return 0, apperrors.ErrDB(err)
+		return nil, apperrors.ErrDB(err)
 	}
 
 	// 9) Thành công, return
-	return recordId, nil
+
+	return &usermodel.UserRegisterReponse{
+		Address:  newAddr,
+		Mnemonic: mnemonic,
+	}, nil
 }

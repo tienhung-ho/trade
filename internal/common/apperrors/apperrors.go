@@ -152,6 +152,12 @@ func ErrPasswordInvalid(entity string, err error) *AppError {
 		fmt.Sprintf("ErrCannotLogin%s", entity), entity)
 }
 
+func ErrMnemonicInvalid(entity string, err error) *AppError {
+	return NewFullErrorResponse(http.StatusForbidden, err,
+		fmt.Sprintf("Cannot login, wrong mnemonic %s", strings.ToLower(entity)),
+		fmt.Sprintf("ErrCannotLogin%s", entity), entity)
+}
+
 func ErrCannotDeleteEntity(entity string, err error) *AppError {
 	return NewErrorResponse(err,
 		fmt.Sprintf("Cannot delete %s", strings.ToLower(entity)),

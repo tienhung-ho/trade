@@ -1,8 +1,8 @@
 package categorystorage
 
 import (
+	categorymodel "client/internal/model/mysql/category"
 	"context"
-	categorymodel "tart-shop-manager/internal/entity/dtos/sql/category"
 )
 
 func (s *mysqlCategory) DeleteCategory(ctx context.Context, cond map[string]interface{}, morekeys ...string) error {

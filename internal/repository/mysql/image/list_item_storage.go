@@ -1,8 +1,8 @@
 package imagestorage
 
 import (
+	imagemodel "client/internal/model/mysql/image"
 	"context"
-	imagemodel "tart-shop-manager/internal/entity/dtos/sql/image"
 )
 
 func (s *mysqlImage) ListItem(ctx context.Context, cond map[string]interface{}) ([]imagemodel.Image, error) {
@@ -10,7 +10,8 @@ func (s *mysqlImage) ListItem(ctx context.Context, cond map[string]interface{}) 
 	db := s.db
 
 	var records []imagemodel.Image
-	if err := db.WithContext(ctx).Where(cond).Find(&records).Error; err != nil {
+	if err := db.WithContext(ctx).Select(SelectFields).Where(cond).Find(&records).Error; err != nil {
+
 		return nil, err
 	}
 

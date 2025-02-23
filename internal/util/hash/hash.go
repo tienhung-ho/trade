@@ -1,7 +1,8 @@
 package hashutil
 
 import (
-	"math"
+	"crypto/sha256"
+	"encoding/hex"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -40,7 +41,7 @@ func (pm *passwordManager) VerifyPassword(hash, passwordLogin string) bool {
 }
 
 func (pm *passwordManager) HashMnemonic(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), pm.cost+int(math.RoundToEven(12)))
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), pm.cost+2)
 	if err != nil {
 		return "", err
 	}
@@ -50,4 +51,27 @@ func (pm *passwordManager) HashMnemonic(password string) (string, error) {
 func (pm *passwordManager) VerifyMnemonic(hash, mnemonicLogin string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(mnemonicLogin))
 	return err == nil
+}
+
+type mnemonicSHAHash struct{}
+
+func NewMnemonicSHA() *mnemonicSHAHash {
+	return &mnemonicSHAHash{}
+}
+
+func (mnemonicSHAHash) HashSHA256(plainText string) string {
+	h := sha256.New()
+	h.Write([]byte(plainText))
+	// h.Sum(nil) trả về mảng byte 32 bytes
+	hashBytes := h.Sum(nil)
+
+	// Chuyển mảng byte thành chuỗi hex
+	return hex.EncodeToString(hashBytes)
+}
+
+func (m mnemonicSHAHash) CompareHashSHA256(hashValue, plainValue string) bool {
+	// Băm plainValue
+	hashedPlain := m.HashSHA256(plainValue)
+	// So sánh chuỗi
+	return hashedPlain == hashValue
 }

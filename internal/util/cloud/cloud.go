@@ -2,6 +2,8 @@ package cloudutil
 
 import (
 	"bytes"
+	"client/internal/common/apperrors"
+	imagemodel "client/internal/model/mysql/image"
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
@@ -9,10 +11,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"log"
 	"os"
 	"sync"
-	"tart-shop-manager/internal/common"
-	imagemodel "tart-shop-manager/internal/entity/dtos/sql/image"
 )
 
 var (
@@ -62,7 +63,7 @@ func initUploader() {
 func UploadToS3(ctx context.Context, images []Image) ([]UploadResult, error) {
 	once.Do(initUploader)
 	if initErr != nil {
-		return nil, common.ErrCloudConnectionFailed(initErr)
+		return nil, apperrors.ErrCloudConnectionFailed(initErr)
 	}
 
 	bucketName := os.Getenv("SUPABASE_BUCKET")
@@ -104,7 +105,7 @@ func UploadToS3(ctx context.Context, images []Image) ([]UploadResult, error) {
 
 			// Check for file size limit (example: 100MB)
 			if len(img.FileBuffer) > 100*1024*1024 {
-				uploadErr = common.ErrCannotUploadFile("image", fmt.Errorf("file size: %d bytes", len(img.FileBuffer)))
+				uploadErr = apperrors.ErrCannotUploadFile("image", fmt.Errorf("file size: %d bytes", len(img.FileBuffer)))
 			} else {
 				if len(img.FileBuffer) < (5 * 1024 * 1024) { // Files smaller than 5MB
 					svc := s3.New(sess)
@@ -114,7 +115,7 @@ func UploadToS3(ctx context.Context, images []Image) ([]UploadResult, error) {
 						Body:   bytes.NewReader(img.FileBuffer),
 					})
 					if err != nil {
-						uploadErr = common.ErrCannotUploadFile(img.FileName, err)
+						uploadErr = apperrors.ErrCannotUploadFile(img.FileName, err)
 					}
 				} else {
 					_, err := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
@@ -123,7 +124,7 @@ func UploadToS3(ctx context.Context, images []Image) ([]UploadResult, error) {
 						Body:   bytes.NewReader(img.FileBuffer),
 					})
 					if err != nil {
-						uploadErr = common.ErrCannotUploadFile(img.FileName, err)
+						uploadErr = apperrors.ErrCannotUploadFile(img.FileName, err)
 					}
 				}
 			}
@@ -146,13 +147,14 @@ func UploadToS3(ctx context.Context, images []Image) ([]UploadResult, error) {
 	var anyError bool
 	for result := range resultsChan {
 		if result.Error != nil {
+			log.Print(result.Error)
 			anyError = true
 		}
 		results = append(results, result)
 	}
 
 	if anyError {
-		return results, common.ErrCannotUploadFile("images", fmt.Errorf("one or more uploads failed"))
+		return results, apperrors.ErrCannotUploadFile("images", fmt.Errorf("one or more uploads failed"))
 	}
 
 	return results, nil
@@ -177,7 +179,7 @@ func UploadSingleImageToS3(ctx context.Context, fileBuffer []byte, fileName stri
 
 func DeleteSingleImageFromS3(ctx context.Context, fileName string) error {
 	if sess == nil {
-		return common.ErrCloudConnectionFailed(fmt.Errorf("AWS session not initialized"))
+		return apperrors.ErrCloudConnectionFailed(fmt.Errorf("AWS session not initialized"))
 	}
 
 	bucketName := os.Getenv("SUPABASE_BUCKET")
@@ -188,7 +190,7 @@ func DeleteSingleImageFromS3(ctx context.Context, fileName string) error {
 		Key:    aws.String(fileName),
 	})
 	if err != nil {
-		return common.ErrCannotDeleteFile(imagemodel.EntityName, err)
+		return apperrors.ErrCannotDeleteFile(imagemodel.EntityName, err)
 	}
 
 	// Đợi cho đến khi object bị xóa
@@ -197,7 +199,7 @@ func DeleteSingleImageFromS3(ctx context.Context, fileName string) error {
 		Key:    aws.String(fileName),
 	})
 	if err != nil {
-		return common.ErrCannotDeleteFile(imagemodel.EntityName, err)
+		return apperrors.ErrCannotDeleteFile(imagemodel.EntityName, err)
 	}
 
 	return nil
@@ -224,7 +226,7 @@ func DeleteSingleImageFromS3(ctx context.Context, fileName string) error {
 //	//"net/url"
 //	"os"
 //	"sync"
-//	"tart-shop-manager/internal/common"
+//	"tart-shop-manager/internal/apperrors"
 //	imagemodel "tart-shop-manager/internal/entity/dtos/sql/image"
 //)
 //
@@ -316,7 +318,7 @@ func DeleteSingleImageFromS3(ctx context.Context, fileName string) error {
 //	})
 //	if initErr != nil {
 //		log.Print(initErr)
-//		return nil, common.ErrCloudConnectionFailed(initErr)
+//		return nil, apperrors.ErrCloudConnectionFailed(initErr)
 //	}
 //
 //	bucketName := os.Getenv("SUPABASE_BUCKET")
@@ -355,7 +357,7 @@ func DeleteSingleImageFromS3(ctx context.Context, fileName string) error {
 //
 //			// Check for file size limit (example: 100MB)
 //			if len(img.FileBuffer) > 100*1024*1024 {
-//				uploadErr = common.ErrCannotUploadFile("image", fmt.Errorf("file size: %d bytes", len(img.FileBuffer)))
+//				uploadErr = apperrors.ErrCannotUploadFile("image", fmt.Errorf("file size: %d bytes", len(img.FileBuffer)))
 //			} else {
 //				// Upload smaller files (<5MB) directly, use uploader for larger files
 //				input := &s3.PutObjectInput{
@@ -375,7 +377,7 @@ func DeleteSingleImageFromS3(ctx context.Context, fileName string) error {
 //					fileURL = fmt.Sprintf("%s/storage/v1/object/public/%s/%s", supabaseURL, bucketName, img.FileName)
 //				} else {
 //					log.Print(uploadErr)
-//					uploadErr = common.ErrCannotUploadFile(img.FileName, uploadErr)
+//					uploadErr = apperrors.ErrCannotUploadFile(img.FileName, uploadErr)
 //					// Ensure the error is logged with more detail for debugging
 //					resultsChan <- UploadResult{
 //						FileName: img.FileName,
@@ -412,7 +414,7 @@ func DeleteSingleImageFromS3(ctx context.Context, fileName string) error {
 //	}
 //
 //	if anyError {
-//		return results, common.ErrCannotUploadFile("images", fmt.Errorf("one or more uploads failed"))
+//		return results, apperrors.ErrCannotUploadFile("images", fmt.Errorf("one or more uploads failed"))
 //	}
 //
 //	return results, nil
@@ -440,7 +442,7 @@ func DeleteSingleImageFromS3(ctx context.Context, fileName string) error {
 //		initErr = initUploader(ctx)
 //	})
 //	if initErr != nil {
-//		return common.ErrCloudConnectionFailed(initErr)
+//		return apperrors.ErrCloudConnectionFailed(initErr)
 //	}
 //
 //	bucketName := os.Getenv("SUPABASE_BUCKET")
@@ -457,7 +459,7 @@ func DeleteSingleImageFromS3(ctx context.Context, fileName string) error {
 //		} else {
 //			log.Printf("Failed to delete %s: %v", fileName, err)
 //		}
-//		return common.ErrCannotDeleteFile(imagemodel.EntityName, err)
+//		return apperrors.ErrCannotDeleteFile(imagemodel.EntityName, err)
 //	}
 //
 //	log.Printf("Successfully deleted %s from bucket %s", fileName, bucketName)

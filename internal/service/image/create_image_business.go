@@ -1,11 +1,11 @@
 package imagebusiness
 
 import (
+	"client/internal/common/apperrors"
+	imagemodel "client/internal/model/mysql/image"
+	cloudutil "client/internal/util/cloud"
 	"context"
 	"log"
-	"tart-shop-manager/internal/common"
-	imagemodel "tart-shop-manager/internal/entity/dtos/sql/image"
-	cloudutil "tart-shop-manager/internal/util/cloud"
 )
 
 type CreateImageStorage interface {
@@ -25,7 +25,7 @@ func (biz *createImageBusiness) CreateImage(ctx context.Context, data *cloudutil
 	// Bước 1: Upload ảnh lên cloud
 	fileURL, err := cloudutil.UploadSingleImageToS3(ctx, data.FileBuffer, data.FileName)
 	if err != nil {
-		return 0, "", common.ErrCannotUploadFile("image", err)
+		return 0, "", apperrors.ErrCannotUploadFile("image", err)
 	}
 
 	// Bước 2: Lưu thông tin ảnh vào cơ sở dữ liệu
@@ -41,7 +41,7 @@ func (biz *createImageBusiness) CreateImage(ctx context.Context, data *cloudutil
 		if deleteErr != nil {
 			log.Println(deleteErr.Error())
 		}
-		return 0, "", common.ErrCannotCreateEntity(imagemodel.EntityName, err)
+		return 0, "", apperrors.ErrCannotCreateEntity(imagemodel.EntityName, err)
 	}
 
 	return recordID, fileURL, nil

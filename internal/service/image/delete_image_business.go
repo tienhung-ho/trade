@@ -1,9 +1,9 @@
 package imagebusiness
 
 import (
+	"client/internal/common/apperrors"
+	imagemodel "client/internal/model/mysql/image"
 	"context"
-	"tart-shop-manager/internal/common"
-	imagemodel "tart-shop-manager/internal/entity/dtos/sql/image"
 )
 
 type DeleteImageStorage interface {
@@ -21,7 +21,7 @@ func NewDeleteImageBiz(store DeleteImageStorage) *deleteImageBusiness {
 func (biz *deleteImageBusiness) DeleteImage(ctx context.Context, cond map[string]interface{}, morekeys ...string) error {
 
 	if err := biz.store.DeleteImage(ctx, cond, morekeys...); err != nil {
-		return common.ErrCannotDeleteEntity(imagemodel.EntityName, err)
+		return apperrors.ErrCannotDeleteEntity(imagemodel.EntityName, err)
 	}
 
 	return nil

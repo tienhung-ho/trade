@@ -1,16 +1,16 @@
 package categoryhandler
 
 import (
+	"client/internal/common/apperrors"
+	"client/internal/common/appresponses"
+	"client/internal/common/filter"
+	paging "client/internal/common/paging"
+	categorystorage "client/internal/repository/mysql/category"
+	categorybusiness "client/internal/service/category"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"net/http"
-	"tart-shop-manager/internal/common"
-	commonfilter "tart-shop-manager/internal/common/filter"
-	paggingcommon "tart-shop-manager/internal/common/paging"
-	categorystorage "tart-shop-manager/internal/repository/mysql/category"
-	categorycache "tart-shop-manager/internal/repository/redis/category"
-	categorybusiness "tart-shop-manager/internal/service/category"
 )
 
 func ListCategoryHandler(db *gorm.DB, rdb *redis.Client) func(c *gin.Context) {
@@ -20,25 +20,25 @@ func ListCategoryHandler(db *gorm.DB, rdb *redis.Client) func(c *gin.Context) {
 			//"status": []string{"pending", "active", "inactive"},
 		}
 
-		var paging paggingcommon.Paging
+		var paging paging.Paging
 
 		if err := c.ShouldBind(&paging); err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInternal(err))
+			c.JSON(http.StatusBadRequest, apperrors.ErrInternal(err))
 			return
 		}
 
 		paging.Process()
 
-		var filter commonfilter.Filter
+		var filter filter.Filter
 
 		if err := c.ShouldBind(&filter); err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInternal(err))
+			c.JSON(http.StatusBadRequest, apperrors.ErrInternal(err))
 			return
 		}
 
 		store := categorystorage.NewMySQLCategory(db)
-		cache := categorycache.NewRdbStorage(rdb)
-		biz := categorybusiness.NewListItemCategoryBiz(store, cache)
+		//cache := categorycache.NewRdbStorage(rdb)
+		biz := categorybusiness.NewListItemCategoryBiz(store, nil)
 
 		records, err := biz.ListItem(c.Request.Context(), condition, &paging, &filter)
 		if err != nil {
@@ -46,6 +46,6 @@ func ListCategoryHandler(db *gorm.DB, rdb *redis.Client) func(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusOK, common.NewSuccesResponse(records, paging, filter))
+		c.JSON(http.StatusOK, appresponses.NewSuccesResponse(records, paging, filter))
 	}
 }

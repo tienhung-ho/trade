@@ -2,6 +2,8 @@ package routerv1
 
 import (
 	userauthhandler "client/api/handler/auth"
+	categoryv1 "client/api/route/v1/category"
+	imagev1 "client/api/route/v1/image"
 	cosmosmodel "client/internal/model/cosmos"
 
 	"github.com/gin-contrib/cors"
@@ -28,8 +30,20 @@ func NewRouter(db *gorm.DB, rdb *redis.Client, appCtx *cosmosmodel.AppContext) *
 
 	v1 := r.Group("/api/v1")
 	v1.POST("auth/register", userauthhandler.RegisterUserHandler(db, rdb, appCtx))
+	v1.POST("auth/login-web-2", userauthhandler.LoginWeb2Handler(db))
+	v1.POST("auth/login-web-3", userauthhandler.LoginWeb3Handler(db))
+	v1.POST("auth/refresh-token", userauthhandler.RefreshToken())
 	//	v1.Use(authmiddleware.AuthRequire(db, rdb))
 	{
+		category := v1.Group("/category")
+		{
+			categoryv1.CategoryRouter(category, db, rdb)
+		}
+		image := v1.Group("/image")
+		{
+			imagev1.ImageRouter(image, db)
+		}
+
 	}
 	return r
 }
