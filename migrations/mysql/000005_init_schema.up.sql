@@ -1,0 +1,1 @@
+ALTER TABLE image MODIFY COLUMN resource_id BIGINT(20) NULL;
