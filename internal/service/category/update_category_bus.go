@@ -5,6 +5,7 @@ import (
 	categorymodel "client/internal/model/mysql/category"
 	imagemodel "client/internal/model/mysql/image"
 	"context"
+
 	"gorm.io/gorm"
 )
 
@@ -96,9 +97,11 @@ func (biz *updateCategoryBusiness) UpdateCategory(ctx context.Context, cond map[
 			}
 		}
 
+		entityName := categorymodel.EntityName
+
 		// 4c. Bulk update: set resource_id = categoryID cho ảnh toAdd
 		if len(toAdd) > 0 {
-			err := biz.image.BulkUpdateResourceID(ctx, tx, toAdd, &record.CategoryID)
+			err := biz.image.BulkUpdateResourceID(ctx, tx, toAdd, &record.CategoryID, &entityName)
 			if err != nil {
 				tx.Rollback()
 				return nil, apperrors.ErrCannotUpdateEntity("Image", err)
@@ -108,7 +111,7 @@ func (biz *updateCategoryBusiness) UpdateCategory(ctx context.Context, cond map[
 		// 4d. Bulk update: set resource_id = null (hoặc xóa hẳn) cho ảnh toRemove
 		if len(toRemove) > 0 {
 			// TH1: Xóa liên kết => set resource_id = NULL
-			err := biz.image.BulkUpdateResourceID(ctx, tx, toRemove, nil)
+			err := biz.image.BulkUpdateResourceID(ctx, tx, toRemove, nil, nil)
 			// TH2: Xóa luôn record => biz.image.BulkDeleteImages(ctx, toRemove)
 
 			if err != nil {

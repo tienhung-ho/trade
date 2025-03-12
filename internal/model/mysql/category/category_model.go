@@ -10,10 +10,10 @@ const (
 )
 
 type Category struct {
-	CategoryID  uint64             `gorm:"column:category_id;primaryKey;autoIncrement" json:"category_id"`
-	Name        string             `gorm:"column:name;size:200;not null" json:"name"`
-	Description string             `gorm:"column:description;type:text" json:"description"`
-	Images      []imagemodel.Image `gorm:"polymorphic:Resource;polymorphicValue:category" json:"images"`
+	CategoryID  uint64             `gorm:"column:category_id;primaryKey;autoIncrement" json:"category_id,omitempty"`
+	Name        string             `gorm:"column:name;size:200;not null" json:"name,omitempty"`
+	Description string             `gorm:"column:description;type:text" json:"description,omitempty"`
+	Images      []imagemodel.Image `gorm:"polymorphic:Resource;polymorphicValue:category" json:"image,omitempty"`
 	model.CommonFields
 }
 

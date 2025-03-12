@@ -9,12 +9,12 @@ import (
 
 // User đại diện cho bảng `user`
 type User struct {
-	ID        uint64         `gorm:"column:user_id;primaryKey;autoIncrement" json:"user_id"`
+	ID        uint64         `gorm:"column:user_id;primaryKey;autoIncrement" json:"user_id,omitempty"`
 	Fullname  string         `gorm:"column:fullname;size:300" json:"fullname,omitempty"`
-	Email     string         `gorm:"column:email;size:255;unique;not null" json:"email"`
+	Email     string         `gorm:"column:email;size:255;unique;not null" json:"email,omitempty"`
 	Password  string         `gorm:"column:password;size:255;not null" json:"-"` // không expose password trong JSON
 	Phone     string         `gorm:"column:phone;size:20" json:"phone,omitempty"`
-	Status    string         `gorm:"column:status;type:enum('Pending','Active','Inactive');default:'Pending'" json:"status"`
+	Status    string         `gorm:"column:status;type:enum('Pending','Active','Inactive');default:'Pending'" json:"status,omitempty"`
 	Gender    string         `gorm:"column:gender;type:enum('Male','Female','Other')" json:"gender,omitempty"`
 	Profile   datatypes.JSON `gorm:"column:profile;type:json" json:"profile,omitempty"`
 	LastLogin *time.Time     `gorm:"column:last_login" json:"last_login,omitempty"`

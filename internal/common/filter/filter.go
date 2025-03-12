@@ -14,8 +14,8 @@ type Filter struct {
 	StartDate    *datatypes.CustomDate `json:"start_date,omitempty" form:"start_date"`
 	EndDate      *datatypes.CustomDate `json:"end_date,omitempty" form:"end_date"`
 	IngredientID *uint64               `json:"ingredient,omitempty" form:"ingredient_id"`
+	ProductID    uint64                `json:"product_id,omitempty"`
 	OrderDate
-	Recipe
 	Product
 	ReportOrderDate
 }
@@ -32,12 +32,6 @@ type OrderDate struct {
 
 type ReportOrderDate struct {
 	InDate *datatypes.CustomDate `json:"in_date,omitempty" form:"in_date"`
-}
-
-type Recipe struct {
-	ProductID  uint64   `json:"product_id,omitempty" form:"product_id"`
-	ProductIDs []uint64 `json:"product_ids,omitempty"`
-	Sizes      []string `json:"sizes,omitempty"`
 }
 
 type Product struct {

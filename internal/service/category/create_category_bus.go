@@ -5,6 +5,7 @@ import (
 	categorymodel "client/internal/model/mysql/category"
 	imagemodel "client/internal/model/mysql/image"
 	"context"
+
 	"gorm.io/gorm"
 )
 
@@ -22,7 +23,8 @@ type UpdateImage interface {
 	DeleteImage(ctx context.Context, cond map[string]interface{}, morekeys ...string) error
 	UpdateImage(ctx context.Context, cond map[string]interface{}, data *imagemodel.UpdateImage) error
 	ListItem(ctx context.Context, cond map[string]interface{}) ([]imagemodel.Image, error)
-	BulkUpdateResourceID(ctx context.Context, db *gorm.DB, imageIDs []uint64, resourceID *uint64) error
+	BulkUpdateResourceID(ctx context.Context, db *gorm.DB,
+		imageIDs []uint64, resourceID *uint64, resourceType *string) error
 	BulkDeleteImages(ctx context.Context, db *gorm.DB, imageIDs []uint64) error
 }
 
@@ -94,10 +96,11 @@ func (biz *createCategoryBusiness) CreateCategory(ctx context.Context, data *cat
 		}
 	}
 
+	entityName := categorymodel.EntityName
 	// 5. Thêm liên kết (UPDATE resource_id = recordID) cho các ảnh "toAdd"
 	if len(toAdd) > 0 {
 		// gọi bulk update
-		err := biz.imageStore.BulkUpdateResourceID(ctx, tx, toAdd, &recordID)
+		err := biz.imageStore.BulkUpdateResourceID(ctx, tx, toAdd, &recordID, &entityName)
 		if err != nil {
 			tx.Rollback()
 			return 0, apperrors.ErrCannotUpdateEntity("image", err)
@@ -107,7 +110,7 @@ func (biz *createCategoryBusiness) CreateCategory(ctx context.Context, data *cat
 	// 6. Xoá liên kết (hoặc xoá hẳn) cho "toRemove"
 	if len(toRemove) > 0 {
 		// Nếu chỉ muốn xóa liên kết => set resource_id = NULL
-		err := biz.imageStore.BulkUpdateResourceID(ctx, tx, toRemove, nil)
+		err := biz.imageStore.BulkUpdateResourceID(ctx, tx, toRemove, nil, nil)
 
 		// Nếu muốn xoá luôn record =>
 		// err := biz.imageStore.BulkDeleteImages(ctx, toRemove)

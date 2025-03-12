@@ -27,6 +27,26 @@ func (s *mysqlUser) GetUser(ctx context.Context, cond map[string]interface{},
 	return &record, nil
 }
 
+func (s *mysqlUser) GetUsers(ctx context.Context, IDs []uint64,
+	morekeys ...string) ([]usermodel.User, error) {
+
+	db := s.db
+
+	var record []usermodel.User
+
+	if err := db.WithContext(ctx).
+		Select(SelectFields).
+		Where("user_id IN ?", IDs).
+		Preload("Wallets", func(db *gorm.DB) *gorm.DB {
+			return db.Select(WalletSelectField)
+		}).
+		Find(&record).Error; err != nil {
+		return nil, err
+	}
+
+	return record, nil
+}
+
 func (s *mysqlUser) GetUserByWalletAddress(ctx context.Context, address string) (*usermodel.User, error) {
 	db := s.db
 
